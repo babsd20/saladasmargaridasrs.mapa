@@ -3,10 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
 <style>
   :root{
     --rosa-escuro:#b3004b;
@@ -16,56 +13,58 @@
 
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff8fc;color:#222}
   header{padding:18px 24px 6px}
-  h1{margin:0;color:var(--rosa-escuro);font-size:30px;text-align:left}
+  h1{margin:0;color:var(--rosa-escuro);font-size:36px;text-align:left}
+  h2.subtitle{margin:2px 0 12px 0;color:#555;font-size:16px;font-weight:400}
   .layout{display:flex;gap:18px;padding:16px 24px}
   #map{flex:3;height:72vh;border-radius:10px;border:4px solid var(--rosa-escuro);box-shadow:0 2px 6px rgba(0,0,0,0.06)}
   .sidebar{flex:1;background:#fff;border-radius:10px;padding:14px;border:3px solid #f06fa9;height:72vh;overflow:auto}
   .sidebar h2{color:var(--rosa-escuro);margin:0 0 12px 0;font-size:18px}
+  .filter-container{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .filter-container input, .filter-container select{padding:6px;border-radius:6px;border:1px solid #ccc}
   ul.mun-list{list-style:none;padding-left:12px;margin:0}
   ul.mun-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid #f4d6e6}
   ul.mun-list li .name {display:flex;align-items:center;gap:10px}
   ul.mun-list li .year {color:#111;font-weight:600}
 
-  /* estilo do ícone: círculo rosa com a imagem no centro */
-  .marg-icon {
-    width:25px;
-    height:25px;
-    border-radius:50%;
-    background: var(--rosa);
-    border: 2px solid var(--rosa-borda);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-  }
-  .marg-icon img {
-    width:26px;
-    height:26px;
-    object-fit:contain;
-    pointer-events:none;
-    filter: drop-shadow(0 0 0 rgba(0,0,0,0)); /* mantém definido */
-  }
+  .marg-icon {width:25px;height:25px;border-radius:50%;background: var(--rosa);border: 2px solid var(--rosa-borda);display:flex;align-items:center;justify-content:center;box-shadow: 0 1px 3px rgba(0,0,0,0.15);}
+  .marg-icon img {width:26px;height:26px;object-fit:contain;pointer-events:none;filter: drop-shadow(0 0 0 rgba(0,0,0,0));}
 
-  /* legenda fixa no canto inferior esquerdo */
   .map-legend {
-    position: absolute;
-    left: 26px;
-    bottom: 22px;
-    background: white;
-    border: 2px solid var(--rosa-escuro);
-    padding: 8px 12px;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-    display:flex;
-    gap:10px;
-    align-items:center;
-    font-weight:600;
-    color:var(--rosa-escuro);
-  }
-  .map-legend .icon {width:28px;height:28px;border-radius:50%;background:var(--rosa);border:2px solid var(--rosa-borda);display:flex;align-items:center;justify-content:center}
-  .map-legend .icon img{width:30px;height:30px}
+  position: fixed; /* fixa na tela, independente do scroll */
+  left: 24px;
+  bottom: 24px;
+  background: white;
+  border: 2px solid var(--rosa-escuro);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  display:flex;
+  gap:10px;
+  align-items:center;
+  font-weight:600;
+  color:var(--rosa-escuro);
+  z-index: 1000; /* garante que fique acima de todos os elementos */
+}
 
-  /* responsividade simples */
+.map-legend .icon {
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  background:var(--rosa);
+  border:2px solid var(--rosa-borda);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.map-legend .icon img {
+  width:30px;
+  height:30px;
+}
+
+  .sidebar .counter{font-weight:600;margin-bottom:8px}
+  .sidebar button{margin-top:6px;padding:6px 10px;border:none;border-radius:6px;background:var(--rosa-escuro);color:white;cursor:pointer}
+
   @media (max-width:900px){
     .layout{flex-direction:column}
     #map{height:60vh}
@@ -76,54 +75,47 @@
 <body>
 
 <header>
-  <h1>Mapa elaborado pela Mestranda Bárbara Dutra (PPGSSPS/Unipampa). </h1>
+  <h1>Mapa das Salas das Margaridas – Rio Grande do Sul</h1>
+  <h2 class="subtitle">Elaborado por Bárbara Dutra (PPGSSPS/Unipampa)</h2>
 </header>
 
 <div class="layout">
   <div id="map"></div>
 
   <aside class="sidebar">
-    <h2>Municípios do Estado do Rio Grande do Sul que dispõem de Delegacias da Policia Civil com Sala das Margaridas. </h2>
+    <h2> Municípios com Sala das Margaridas nas Delegacias de Polícia Civil </h2>
+
+    <div class="filter-container">
+      <input type="text" id="searchNome" placeholder="Buscar por município...">
+      <select id="filterAno">
+        <option value="">Todos os anos</option>
+      </select>
+    </div>
+
+    <div class="counter">Total de municípios: <span id="countMunicipios">0</span></div>
+
     <ul id="listaMunicipios" class="mun-list"></ul>
+
+    <button id="exportCSV">Exportar CSV (Excel)</button>
+    <button id="exportPDF">Exportar PDF</button>
   </aside>
 </div>
 
-<!-- legenda -->
 <div class="map-legend" aria-hidden="true">
   <div class="icon"><img src="margarida.png" alt="margarida"></div>
   Municípios com Salas das Margaridas
 </div>
 
-<!-- leaflet -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-/*
-  INSTRUÇÕES:
-  1) Salve a imagem que você enviou com o nome "margarida.png" na mesma pasta deste HTML.
-  2) Abra o arquivo no navegador (http ou file://). Se abrir local e o ícone não aparecer, rode via servidor local.
-*/
-
-/* mapa */
 const map = L.map('map').setView([-30.0, -53.0], 7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-/* Cria um DivIcon que contém a sua imagem dentro do círculo rosa.
-   Usamos um HTML simples para que a imagem que você enviou seja usada diretamente.
-   Não precisa converter para base64 — basta deixar margarida.png na mesma pasta.
-*/
 function createMargaridaDivIcon() {
-  return L.divIcon({
-    className: '', // nenhum estilo extra do leaflet
-    html: `<div class="marg-icon"><img src="margarida.png" alt="margarida"></div>`,
-    iconSize: [41],
-    iconAnchor: [21,42],
-    popupAnchor: [0,-38]
-  });
+  return L.divIcon({ className:'', html:`<div class="marg-icon"><img src="margarida.png" alt="margarida"></div>`, iconSize:[41], iconAnchor:[21,42], popupAnchor:[0,-38] });
 }
 
-/* dados dos municípios (nome, ano, lat, lng) */
 const municipios = [
   { nome: "Agudo", ano: 2022, lat: -29.645, lng: -53.258 },
   { nome: "Alegrete", ano: 2025, lat: -29.783, lng: -55.791 },
@@ -221,31 +213,90 @@ const municipios = [
   { nome: "Viamão", ano: 2019, lat: -30.0886, lng: -51.0267 }
 ];
 
-/* adiciona marcadores e lista lateral */
 const divIcon = createMargaridaDivIcon();
 const listaEl = document.getElementById('listaMunicipios');
+const filterAno = document.getElementById('filterAno');
+const searchNome = document.getElementById('searchNome');
+const countEl = document.getElementById('countMunicipios');
 
-municipios.forEach(m => {
-  const marker = L.marker([m.lat, m.lng], { icon: divIcon }).addTo(map);
+const markers = [];
 
-  marker.bindPopup(`<strong>${m.nome}</strong><br><em>Ano de inauguração:</em> ${m.ano ?? 'Não informado'}`);
-
-  const li = document.createElement('li');
-  li.innerHTML = `<span class="name"><span style="width:20px;height:20px;display:inline-block"><img src="margarida.png" alt="" style="width:20px;height:20px;object-fit:contain"></span> ${m.nome}</span><span class="year">${m.ano ?? 'Não informado'}</span>`;
-  li.style.cursor = 'pointer';
-  li.addEventListener('click', () => {
-    map.setView([m.lat, m.lng], 11);
-    marker.openPopup();
-  });
-  listaEl.appendChild(li);
+// popula filtro de anos
+const anos = [...new Set(municipios.map(m => m.ano).filter(a => a))].sort();
+anos.forEach(a => {
+  const option = document.createElement('option');
+  option.value = a;
+  option.textContent = a;
+  filterAno.appendChild(option);
 });
 
-/* ajuste: se preferir que cada marcador tenha popups abertos ao iniciar,
-   remova o comentário das linhas a seguir. */
-// setTimeout(()=>{ map.eachLayer(l=>{}); },500);
+function updateList() {
+  listaEl.innerHTML = '';
+  let filtered = municipios.filter(m => {
+    const nomeMatch = m.nome.toLowerCase().includes(searchNome.value.toLowerCase());
+    const anoMatch = filterAno.value ? m.ano == filterAno.value : true;
+    return nomeMatch && anoMatch;
+  });
 
+  countEl.textContent = filtered.length;
+
+  markers.forEach(m => map.removeLayer(m.marker));
+
+  filtered.forEach(m => {
+    const marker = L.marker([m.lat,m.lng],{icon:divIcon}).addTo(map).bindPopup(`<strong>${m.nome}</strong><br><em>Ano de inauguração:</em> ${m.ano ?? 'Não informado'}`);
+    markers.push({marker, nome:m.nome});
+    
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="name"><span style="width:20px;height:20px;display:inline-block"><img src="margarida.png" alt="" style="width:20px;height:20px;object-fit:contain"></span> ${m.nome}</span><span class="year">${m.ano ?? 'Não informado'}</span>`;
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => { map.setView([m.lat,m.lng],11); marker.openPopup(); });
+    listaEl.appendChild(li);
+  });
+}
+
+searchNome.addEventListener('input', updateList);
+filterAno.addEventListener('change', updateList);
+
+updateList();
+
+// exportar CSV
+document.getElementById('exportCSV').addEventListener('click', () => {
+  let csv = 'Município,Ano\n';
+  const lis = Array.from(listaEl.querySelectorAll('li'));
+  lis.forEach(li => {
+    const nome = li.querySelector('.name').textContent.trim();
+    const ano = li.querySelector('.year').textContent.trim();
+    csv += `"${nome}","${ano}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'municipios.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// exportar PDF
+document.getElementById('exportPDF').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(12);
+  doc.text('Municípios com Sala das Margaridas', 14, 14);
+  let y = 20;
+  const lis = Array.from(listaEl.querySelectorAll('li'));
+  lis.forEach((li, i) => {
+    const nome = li.querySelector('.name').textContent.trim();
+    const ano = li.querySelector('.year').textContent.trim();
+    doc.text(`${i+1}. ${nome} - ${ano}`, 14, y);
+    y += 8;
+    if(y>280){ doc.addPage(); y=14; }
+  });
+  doc.save('municipios.pdf');
+});
 </script>
 </body>
 </html>
+
 
 
