@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+  :root{
+    --rosa-escuro:#b3004b;
+    --rosa:#ff9fd6;
+    --rosa-borda:#d84fa7;
+  }
+
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff8fc;color:#222}
+  header{padding:18px 24px 6px}
+  h1{margin:0;color:var(--rosa-escuro);font-size:30px;text-align:left}
+  .layout{display:flex;gap:18px;padding:16px 24px}
+  #map{flex:3;height:72vh;border-radius:10px;border:4px solid var(--rosa-escuro);box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+  .sidebar{flex:1;background:#fff;border-radius:10px;padding:14px;border:3px solid #f06fa9;height:72vh;overflow:auto}
+  .sidebar h2{color:var(--rosa-escuro);margin:0 0 12px 0;font-size:18px}
+  ul.mun-list{list-style:none;padding-left:12px;margin:0}
+  ul.mun-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid #f4d6e6}
+  ul.mun-list li .name {display:flex;align-items:center;gap:10px}
+  ul.mun-list li .year {color:#111;font-weight:600}
+
+  /* estilo do ícone: círculo rosa com a imagem no centro */
+  .marg-icon {
+    width:25px;
+    height:25px;
+    border-radius:50%;
+    background: var(--rosa);
+    border: 2px solid var(--rosa-borda);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .marg-icon img {
+    width:26px;
+    height:26px;
+    object-fit:contain;
+    pointer-events:none;
+    filter: drop-shadow(0 0 0 rgba(0,0,0,0)); /* mantém definido */
+  }
+
+  /* legenda fixa no canto inferior esquerdo */
+  .map-legend {
+    position: absolute;
+    left: 26px;
+    bottom: 22px;
+    background: white;
+    border: 2px solid var(--rosa-escuro);
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    display:flex;
+    gap:10px;
+    align-items:center;
+    font-weight:600;
+    color:var(--rosa-escuro);
+  }
+  .map-legend .icon {width:28px;height:28px;border-radius:50%;background:var(--rosa);border:2px solid var(--rosa-borda);display:flex;align-items:center;justify-content:center}
+  .map-legend .icon img{width:18px;height:18px}
+
+  /* responsividade simples */
+  @media (max-width:900px){
+    .layout{flex-direction:column}
+    #map{height:60vh}
+    .sidebar{height:auto}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Mapa elaborado pela Mestranda Bárbara Dutra (PPGSSPS/Unipampa). </h1>
+</header>
+
+<div class="layout">
+  <div id="map"></div>
+
+  <aside class="sidebar">
+    <h2>Municípios do Estado do Rio Grande do Sul que dispõem de Delegacias da Policia Civil com Sala das Margaridas. </h2>
+    <ul id="listaMunicipios" class="mun-list"></ul>
+  </aside>
+</div>
+
+<!-- legenda -->
+<div class="map-legend" aria-hidden="true">
+  <div class="icon"><img src="margarida.png" alt="margarida"></div>
+  Municípios com Salas das Margaridas
+</div>
+
+<!-- leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/*
+  INSTRUÇÕES:
+  1) Salve a imagem que você enviou com o nome "margarida.png" na mesma pasta deste HTML.
+  2) Abra o arquivo no navegador (http ou file://). Se abrir local e o ícone não aparecer, rode via servidor local.
+*/
+
+/* mapa */
+const map = L.map('map').setView([-30.0, -53.0], 7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(map);
+
+/* Cria um DivIcon que contém a sua imagem dentro do círculo rosa.
+   Usamos um HTML simples para que a imagem que você enviou seja usada diretamente.
+   Não precisa converter para base64 — basta deixar margarida.png na mesma pasta.
+*/
+function createMargaridaDivIcon() {
+  return L.divIcon({
+    className: '', // nenhum estilo extra do leaflet
+    html: `<div class="marg-icon"><img src="margarida.png" alt="margarida"></div>`,
+    iconSize: [41,42],
+    iconAnchor: [21,42],
+    popupAnchor: [0,-38]
+  });
+}
+
+/* dados dos municípios (nome, ano, lat, lng) */
+const municipios = [
+  { nome: "Agudo", ano: 2022, lat: -29.645, lng: -53.258 },
+  { nome: "Alegrete", ano: 2025, lat: -29.783, lng: -55.791 },
+  { nome: "Alvorada", ano: 2021, lat: -30.038, lng: -51.082 },
+  { nome: "Arroio do Meio", ano: 2022, lat: -29.4184, lng: -51.9547 },
+  { nome: "Arvorezinha", ano: 2021, lat: -28.7183, lng: -52.1950 },
+  { nome: "Bagé", ano: 2020, lat: -31.3323, lng: -54.1065 },
+  { nome: "Balneário Pinhal", ano: 2025, lat: -30.243, lng: -50.233 },
+  { nome: "Barros Cassal", ano: 2022, lat: -29.094, lng: -52.583 },
+  { nome: "Bento Gonçalves", ano: 2021, lat: -29.1662, lng: -51.5165 },
+  { nome: "Butiá", ano: 2022, lat: -30.117, lng: -51.960 },
+  { nome: "Caçapava do Sul", ano: 2021, lat: -30.5284, lng: -53.8697 },
+  { nome: "Cachoeira do Sul", ano: 2020, lat: -30.0356, lng: -52.3481 },
+  { nome: "Cachoeirinha", ano: 2023, lat: -29.9537, lng: -51.0863 },
+  { nome: "Camaquã", ano: 2019, lat: -30.9329, lng: -51.8105 },
+  { nome: "Campo Bom", ano: 2020, lat: -29.6644, lng: -51.0504 },
+  { nome: "Campo Novo", ano: 2025, lat: -27.679, lng: -53.805 },
+  { nome: "Canguçu", ano: 2021, lat: -31.3919, lng: -52.8809 },
+  { nome: "Canoas", ano: 2021, lat: -29.9882, lng: -51.1873 },
+  { nome: "Capão da Canoa", ano: 2022, lat: -29.7431, lng: -49.9881 },
+  { nome: "Carazinho", ano: 2021, lat: -28.2801, lng: -52.7845 },
+  { nome: "Caxias do Sul", ano: 2021, lat: -29.1678, lng: -51.1764 },
+  { nome: "Cerro Largo", ano: 2023, lat: -28.1402, lng: -54.7437 },
+  { nome: "Chiapetta", ano: 2025, lat: -27.923, lng: -53.941 },
+  { nome: "Constantina", ano: 2021, lat: -27.730, lng: -52.991 },
+  { nome: "Cruz Alta", ano: 2020, lat: -28.6473, lng: -53.5932 },
+  { nome: "Cruzeiro do Sul", ano: 2023, lat: -29.4975, lng: -51.9009 },
+  { nome: "Dois Irmãos", ano: 2022, lat: -29.583, lng: -51.090 },
+  { nome: "Eldorado do Sul", ano: 2021, lat: -30.0970, lng: -51.3090 },
+  { nome: "Encantado", ano: 2022, lat: -29.2307, lng: -51.8887 },
+  { nome: "Erechim", ano: 2023, lat: -27.636, lng: -52.273 },
+  { nome: "Erval Seco", ano: 2020, lat: -27.3551, lng: -53.6499 },
+  { nome: "Espumoso", ano: 2021, lat: -28.724, lng: -52.846 },
+  { nome: "Estância Velha", ano: 2024, lat: -29.5762, lng: -51.1578 },
+  { nome: "Esteio", ano: 2021, lat: -29.8661, lng: -51.1444 },
+  { nome: "Farroupilha", ano: 2020, lat: -29.2155, lng: -51.5451 },
+  { nome: "Faxinal do Soturno", ano: 2023, lat: -29.6200, lng: -53.5350 },
+  { nome: "Fontoura Xavier", ano: 2023, lat: -28.9818, lng: -52.3387 },
+  { nome: "Frederico Westphalen", ano: 2025, lat: -27.358, lng: -53.395 },
+  { nome: "Gramado", ano: 2024, lat: -29.3746, lng: -50.8711 },
+  { nome: "Gravataí", ano: 2021, lat: -29.9329, lng: -50.9996 },
+  { nome: "Ibirubá", ano: 2021, lat: -28.5991, lng: -53.2106 },
+  { nome: "Ijuí", ano: 2020, lat: -28.3846, lng: -53.9213 },
+  { nome: "Jaguarão", ano: 2020, lat: -32.560, lng: -53.377 },
+  { nome: "Júlio de Castilhos", ano: 2024, lat: -29.2891, lng: -53.6706 },
+  { nome: "Lagoa Vermelha", ano: 2021, lat: -28.2144, lng: -51.8491 },
+  { nome: "Lajeado", ano: 2020, lat: -29.4589, lng: -51.9678 },
+  { nome: "Marau", ano: 2021, lat: -28.4418, lng: -52.2033 },
+  { nome: "Montenegro", ano: 2019, lat: -29.7997, lng: -51.4649 },
+  { nome: "Nonoai", ano: 2023, lat: -27.368, lng: -52.770 },
+  { nome: "Nova Petrópolis", ano: 2022, lat: -29.3789, lng: -50.8716 },
+  { nome: "Nova Santa Rita", ano: 2021, lat: -30.0076, lng: -51.2779 },
+  { nome: "Novo Hamburgo", ano: 2021, lat: -29.6733, lng: -51.1293 },
+  { nome: "Nova Prata", ano: null, lat: -28.781, lng: -51.610 },
+  { nome: "Palmeira das Missões", ano: 2025, lat: -27.900, lng: -53.317 },
+  { nome: "Panambi", ano: 2021, lat: -28.2917, lng: -53.4912 },
+  { nome: "Parobé", ano: 2021, lat: -29.6385, lng: -50.8407 },
+  { nome: "Passo Fundo", ano: 2021, lat: -28.6186, lng: -52.4172 },
+  { nome: "Pelotas", ano: 2019, lat: -31.7667, lng: -52.3411 },
+  { nome: "Planalto", ano: 2024, lat: -27.3197, lng: -53.0768 },
+  { nome: "Portão", ano: 2021, lat: -29.700, lng: -51.242 },
+  { nome: "Porto Alegre", ano: 2019, lat: -30.0346, lng: -51.2177 },
+  { nome: "Restinga Seca", ano: 2021, lat: -29.819, lng: -53.371 },
+  { nome: "Rio Grande", ano: 2021, lat: -32.0357, lng: -52.0986 },
+  { nome: "Riozinho", ano: 2021, lat: -29.639, lng: -50.448 },
+  { nome: "Rio Pardo", ano: 2021, lat: -29.988, lng: -52.379 },
+  { nome: "Santa Cruz do Sul", ano: 2019, lat: -29.7196, lng: -52.4277 },
+  { nome: "Santa Maria", ano: 2020, lat: -29.6842, lng: -53.8166 },
+  { nome: "Santa Rosa", ano: 2020, lat: -27.8765, lng: -54.4719 },
+  { nome: "Santana do Livramento", ano: 2021, lat: -30.7816, lng: -55.5398 },
+  { nome: "Santiago", ano: 2019, lat: -29.5448, lng: -54.8719 },
+  { nome: "Santo Augusto", ano: 2025, lat: -27.852, lng: -53.777 },
+  { nome: "São Borja", ano: 2021, lat: -29.8378, lng: -56.0028 },
+  { nome: "São Leopoldo", ano: 2021, lat: -29.7645, lng: -51.1465 },
+  { nome: "São Luis Gonzaga", ano: 2019, lat: -28.2991, lng: -54.9575 },
+  { nome: "São Sepé", ano: 2023, lat: -30.164, lng: -53.560 },
+  { nome: "Sapiranga", ano: 2024, lat: -29.6385, lng: -51.0205 },
+  { nome: "Sapucaia do Sul", ano: 2021, lat: -29.8335, lng: -51.1549 },
+  { nome: "Sarandi", ano: 2023, lat: -27.9157, lng: -53.0531 },
+  { nome: "Seberi", ano: 2025, lat: -27.482, lng: -53.402 },
+  { nome: "Soledade", ano: 2019, lat: -28.8058, lng: -52.2359 },
+  { nome: "Santa Bárbara do Sul", ano: 2022, lat: -28.365, lng: -53.250 },
+  { nome: "Tapera", ano: 2021, lat: -28.7695, lng: -52.9248 },
+  { nome: "Taquara", ano: 2019, lat: -29.6582, lng: -50.7725 },
+  { nome: "Tenente Portela", ano: 2025, lat: -27.371, lng: -53.758 },
+  { nome: "Torres", ano: 2024, lat: -29.3444, lng: -49.7289 },
+  { nome: "Tramandaí", ano: 2024, lat: -30.007, lng: -50.132 },
+  { nome: "Três Coroas", ano: 2021, lat: -29.3563, lng: -50.7850 },
+  { nome: "Três Passos", ano: 2025, lat: -27.455, lng: -53.931 },
+  { nome: "Tupanciretã", ano: 2024, lat: -29.085, lng: -53.842 },
+  { nome: "Uruguaiana", ano: 2020, lat: -29.7656, lng: -57.0865 },
+  { nome: "Vacaria", ano: 2021, lat: -28.5135, lng: -50.9599 },
+  { nome: "Venâncio Aires", ano: 2025, lat: -29.614, lng: -52.193 },
+  { nome: "Vera Cruz", ano: 2023, lat: -29.718, lng: -52.514 },
+  { nome: "Viamão", ano: 2019, lat: -30.0886, lng: -51.0267 }
+];
+
+/* adiciona marcadores e lista lateral */
+const divIcon = createMargaridaDivIcon();
+const listaEl = document.getElementById('listaMunicipios');
+
+municipios.forEach(m => {
+  const marker = L.marker([m.lat, m.lng], { icon: divIcon }).addTo(map);
+
+  marker.bindPopup(`<strong>${m.nome}</strong><br><em>Ano de inauguração:</em> ${m.ano ?? 'Não informado'}`);
+
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="name"><span style="width:20px;height:20px;display:inline-block"><img src="margarida.png" alt="" style="width:20px;height:20px;object-fit:contain"></span> ${m.nome}</span><span class="year">${m.ano ?? 'Não informado'}</span>`;
+  li.style.cursor = 'pointer';
+  li.addEventListener('click', () => {
+    map.setView([m.lat, m.lng], 11);
+    marker.openPopup();
+  });
+  listaEl.appendChild(li);
+});
+
+/* ajuste: se preferir que cada marcador tenha popups abertos ao iniciar,
+   remova o comentário das linhas a seguir. */
+// setTimeout(()=>{ map.eachLayer(l=>{}); },500);
+
+</script>
+</body>
+</html>
