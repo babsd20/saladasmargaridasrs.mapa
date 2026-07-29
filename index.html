@@ -193,7 +193,7 @@ const municipios = [
   { nome: "Santana do Livramento", ano: 2021, lat: -30.886500758713968, lng: -55.527856659534706 },
   { nome: "Santiago", ano: 2019, lat: -29.19448913719701, lng: -54.869315213490665 },
   { nome: "Santo Ângelo", ano: , lat: -28.296098278475718, lng: -54.25798893843916 },
-  { nome: "Santo Augusto", ano: 2025, lat: -27.852, lng: -53.777 },
+  { nome: "Santo Ângelo", ano: "Não informado", lat: -28.296098278475718, lng: -54.25798893843916 },
   { nome: "São Borja", ano: 2021, lat: -28.660221824196377, lng: -56.00860680451266 },
   { nome: "São Francisco de Paula", ano: 2026, lat: -29.446705705498335, lng: -50.5916513057413 },
   { nome: "São Leopoldo", ano: 2021, lat: -29.7645, lng: -51.1465 },
@@ -230,7 +230,10 @@ const countEl = document.getElementById('countMunicipios');
 const markers = [];
 
 // popula filtro de anos
-const anos = [...new Set(municipios.map(m => m.ano).filter(a => a))].sort();
+const anos = [...new Set(
+  municipios.map(m => m.ano)
+  .filter(a => typeof a === "number")
+)].sort();
 anos.forEach(a => {
   const option = document.createElement('option');
   option.value = a;
